@@ -1,0 +1,111 @@
+---
+output: word_document
+---
+####Report for Motor Trend
+Tom Casaletto, Regression Analysis (Johns Hopkins University)
+
+#####Executive Summary
+Motor Trend, a magazine about the automobile industry, has a data set from a collection of cars.  They are interested in exploring the relationship between a set of regressor variables and miles per gallon (MPG) as the outcome.  
+They are particularly interested in the following two questions:
+<ol>
+<li>*Is an automatic or manual transmission better for MPG?
+<li>*Quantify the MPG difference between automatic and manual transmissions.
+</ol>
+
+#####Exploratory Data Analysis
+The questions ask how MPG is related to transmission type (automatic vs manual).  In the Appendix, Figure 1 shows a plot of this simple relationship.  It is clear that a linear model is not appropriate since we only have 2 independent factor values for transmission type.  Also, Figure 2 shows a box plot of MPG vs # of cylinders and transmission type.  This plot shows there is a significant relationship between MPG and # of cylinders (4, 6 or 8).  Figure 3 shows the correlation of all the variables in mtcars to each other.  Note specifically the negative correlation between MPG and cyl (-0.87) and MPG and wt (-0.85).
+
+#####<b>Question1</b>
+The boxplot (Figure 2) shows there is not a clear linear relationship between MPG and transmission type--keeping # of cylinders constant the automatic and manual transmission MPGs overlap.
+
+#####<b>Question2</b>
+Since we cannot develop a model for the transmission type effect on MPG, we cannot quantify the MPG difference.  However, we will find the best linear model for MPG using other regressors in mtcars and discuss this in detail.
+
+#####<b>ModelSelection</b>
+Our hypotheses are thus 
+<ol>
+<li>H0:  The mtcars variables do not relate to MPG.</li>
+<li>Ha:  The variables do relate to MPG.</li>
+</ol>
+
+To find the best linear model, we use the method of Backward Elimination to search for the variables which have a statistically significant impact on MPG.  See these links for more information on this process ( [Ref1](https://www.youtube.com/watch?v=bfGhfalZR-Y)
+[Ref2](https://www.youtube.com/watch?v=itEyHjNjMIc) ).  The idea is to start with all the variables in the model and then eliminate the least significant variable at each step until the only variables remaining are statistically significant as measured by the R 'summary' function (see the P-values).  Also, we expect many of these variables to be correlated and want to eliminate these if possible.  Here are the steps followed in this process along with the decisions along the way.
+
+```{r, echo=TRUE, eval=FALSE}
+fit <- lm(mpg ~ cyl + disp + hp + drat + wt + vs + am + carb, data = mtcars)
+summary(fit) # The P-value for 'carb' shows that it does not relate to MPG
+fit <- update(fit, .~.-carb)
+summary(fit) #The P-value for 'drat' shows that it does not relate to MPG
+fit <- update(fit, .~.-drat)
+summary(fit) #The P-value for 'vs' shows that it does not relate to MPG
+fit <- update(fit, .~.-vs)
+summary(fit) #The P-value for 'disp' shows that it does not relate to MPG
+fit <- update(fit, .~.-disp)
+summary(fit) #The P-value for 'am' shows that it does not relate to MPG
+fit <- update(fit, .~.-am)
+summary(fit) #The P-value for 'hp' shows that it does not relate to MPG
+fit <- update(fit, .~.-hp)
+summary(fit) # Now the P-values are all less than 0.05
+```
+
+#####<b>FinalModelAndResidualAnalysis</b>
+So the final model is simply MPG as a function of the remaining regressors, weight and # of cylinders.  Figure 4 shows the fit coefficients for the final model, which says:
+<ol>
+<li>For every 1000 lb increase in weight, the MPG decreases by 3.2 MPG
+<li>For each increase in # of cylinders, the MPG decreases by 1.5 MPG
+</ol>
+See Figure 5 for a graph of the fitted model which clearly shows as weight increases, MPG decreases.  Finally, Figure 6 shows the residuals for the model which appear to be zero mean (5.5E-17) and unbiased which is what we expect.  Also, we have generated confidence intervals for our slope estimate using the 'confint' command in the section of Figure 6.  So we are 95% confident the slope of the weight regression is between -4.7 and -1.6 and we are 95% confident the slope of the cylinder regression is between -2.4 and -0.7.
+
+####<b>Appendix of Figures</b>
+```{r, echo=FALSE, message=F, warning=F}
+plot (mtcars$am, mtcars$mpg, main="Figure 1:  MPG vs Transmission Type",
+      xlab="Transmission Type(0=automatic, 1=manual)", ylab="MPG")
+```
+
+```{r, echo=FALSE, message=F, warning=F}
+library(ggplot2)
+cbPalette <- c("#999999", "#E69F00", "#56B4E9", "#009E73", "#F0E442", "#0072B2", "#D55E00", "#CC79A7");
+ggplot(mtcars, aes(x=factor(am), y=mpg)) +
+    geom_boxplot() + facet_grid(. ~ cyl) +
+    scale_fill_manual(values=cbPalette) +
+    geom_dotplot(binaxis='y', stackdir='center', dotsize=1, binwidth = 1) + 
+    stat_summary(fun.y=mean, geom="point", shape=5, size=4) +
+    xlab("0=Automatic/1=Manual") + ylab("Mpg") +
+    ggtitle("Figure 2:  Bloxplot view of mtcars data");
+
+```
+
+Figure 3--Correlation of mtcars variables
+```{r, echo=FALSE, message=F, warning=F}
+round(cor(mtcars), 2)
+#library(knitr)
+#kable(round(cor(mtcars),2), format="markdown",digits=2,align='l')
+```
+
+Figure 4--Final model fit coefficients & information
+```{r, echo=TRUE}
+fitFinal <- lm(mpg ~ wt + cyl, data=mtcars)
+summary(fitFinal)
+```
+
+```{r, echo=TRUE}
+library(ggplot2)
+fitFinal <- lm(mpg ~ wt + cyl, data=mtcars)
+ggplot(mtcars, aes(x = wt, y = mpg)) +
+    geom_smooth(method = "lm", se=FALSE, color="black", formula = y ~ x) +
+    geom_point() +
+    xlab("Weight (1000 lb)") + ylab("MPG") +
+    ggtitle("Figure 5a:  Final model, MPG vs Weight");
+ggplot(mtcars, aes(x = cyl, y = mpg)) +
+    geom_smooth(method = "lm", se=FALSE, color="black", formula = y ~ x) +
+    geom_point() +
+    xlab("# of Cylinders") + ylab("MPG") +
+    ggtitle("Figure 5b:  Final model, MPG vs # of Cylinders");
+```
+
+```{r, echo=TRUE}
+plot(1:32, fitFinal$residuals, main="Figure 6: Residual analysis for final model", xlab="Car", ylab="Residual MPG")
+aveResiduals <- mean(fitFinal$residuals)
+aveResiduals
+confint(fitFinal)
+```
